@@ -1,0 +1,7 @@
+services:
+  ml-project:
+    build: .
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: python -m pytest -q
