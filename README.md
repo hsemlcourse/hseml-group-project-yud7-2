@@ -1,9 +1,9 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/kOqwghv0)
 # ML Project — классификация сельскохозяйственных культур
 
-**Студент:Юдинцев Владимир Алексеевич**
+**Студент:** Юдинцев Владимир Алексеевич
 
-**Группа: БИВ232**
+**Группа:** БИВ232
 
 
 ## Оглавление
@@ -30,21 +30,27 @@
 .
 ├── Dockerfile
 ├── docker-compose.yml
+├── Makefile
 ├── data
 │   ├── processed               # Очищенные и обработанные данные
 │   └── raw                     # Исходные файлы
 ├── models                      # Сохранённые модели 
 ├── notebooks
 │   ├── 01_eda_portugal.ipynb   # EDA по Portugal subset
-│   └── 02_baseline_portugal.ipynb # Baseline-модель
+│   ├── 02_baseline_portugal.ipynb # Baseline-модель
+│   └── 03_experiments_portugal.ipynb # CP2 эксперименты и финальная модель
 ├── presentation                # Презентация для защиты
 ├── report
 │   ├── images                  # Изображения для отчёта
 │   ├── baseline_metrics.csv    # Метрики baseline
+│   ├── experiments.csv         # Таблица CP2 экспериментов
+│   ├── feature_scores.csv      # ANOVA F-score признаков
 │   └── report.md               # Финальный отчёт
 ├── src
 │   ├── config.py               # Общие настройки и метаданные Zenodo
 │   ├── data.py                 # Загрузка и подготовка preprocess-версии
+│   ├── features.py             # Feature engineering для CP2
+│   ├── experiments.py          # Запуск CP2 экспериментов
 │   ├── raw_portugal.py         # Извлечение и подготовка Portugal raw data
 │   ├── preprocessing.py        # Предобработка данных
 │   └── modeling.py             # Обучение и оценка моделей
@@ -68,7 +74,7 @@ pip install -r requirements.txt
 python -m src.data info
 ```
 
-Для CP1 используется только Португалия из `raw_data.zip`, потому что это самая компактная и понятная постановка: одна страна, свой train/validation/test split, baseline без feature engineering.
+В работе используется Portugal subset из `raw_data.zip`, потому что это самая компактная и понятная постановка: одна страна, собственный train/validation/test split, baseline и расширенные эксперименты на одинаковом разбиении.
 
 Скачать общий raw-архив с докачкой можно так:
 ```bash
@@ -94,11 +100,24 @@ Docker-проверка окружения:
 docker compose up --build
 ```
 
+Линтеры и тесты:
+```bash
+make lint
+make test
+```
+
 Основные ноутбуки:
 - `notebooks/01_eda_portugal.ipynb` — описание датасета, пропуски, дубли, дисбаланс классов, региональные и временные графики.
 - `notebooks/02_baseline_portugal.ipynb` — подготовка `date x band` признаков, train/validation/test split 60/20/20, baseline без feature engineering.
+- `notebooks/03_experiments_portugal.ipynb` — feature engineering, 4+ моделей, ансамбль, PCA и выбор финальной модели.
 
-Если нужен готовый preprocess-пайплайн по `.npz`, можно скачать `split.zip` и `preprocess.zip`:
+CP2 feature engineering и эксперименты:
+```bash
+make features
+make experiments
+```
+
+Альтернативный preprocess-пайплайн по `.npz` можно запустить через `split.zip` и `preprocess.zip`:
 ```bash
 python -m src.data download --files split.zip preprocess.zip
 python -m src.data prepare
@@ -109,10 +128,12 @@ python -m src.modeling
 - `data/raw/` — исходные файлы
 - `data/processed/` — предобработанные данные
 
-Исходный датасет EuroCropsML объединяет EuroCrops reference data с Sentinel-2 reflectance за 2021 год для Latvia, Portugal и Estonia. В CP1 берётся Portugal из raw stage:
+Исходный датасет EuroCropsML объединяет EuroCrops reference data с Sentinel-2 reflectance за 2021 год для Latvia, Portugal и Estonia. В проекте берётся Portugal из raw stage:
 - `Portugal.parquet` — временные ряды наблюдений по полям
 - `Portugal_labels.parquet` — классы культур; в `Portugal.parquet` целевая переменная `EC_hcat_c` уже продублирована
 - `Portugal.geojson` — геометрии полей, для baseline не используются
+
+Для CP2 из raw Portugal построен engineered-датасет: 99 983 поля, 288 признаков, 66 классов после удаления классов с числом объектов меньше 3. Разбиение сохраняется как индексы train/validation/test 60/20/20.
 
 Сырые и обработанные данные не коммитятся, это настроено в `.gitignore`.
 
@@ -122,6 +143,7 @@ python -m src.modeling
 |--------|---------------|---------------|------------|
 | Most frequent dummy | 0.007 | 0.296 | Test, наивная нижняя планка |
 | SGD Logistic baseline | 0.126 | 0.288 | Test, baseline без feature engineering |
+| ExtraTrees final | 0.191 | 0.557 | Test, engineered features, лучшая validation macro F1 |
 
 
 ## Отчёт
