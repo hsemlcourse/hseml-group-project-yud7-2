@@ -6,6 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -300,6 +301,8 @@ def run_experiments(
     dataset_path: Path = DATASET_PATH,
     output_path: Path = REPORT_DIR / "experiments.csv",
     seed: int = RANDOM_SEED,
+    save_model_path: Path | None = None,
+    skip_plots: bool = False,
 ) -> pd.DataFrame:
     dataset = load_feature_dataset(dataset_path)
     x_train, y_train, x_val, y_val, x_test, y_test = split_dataset(dataset)
@@ -312,6 +315,10 @@ def run_experiments(
         append_metrics(rows, model_name, feature_set, model, x_val, y_val, x_test, y_test)
         if model_name == "extra_trees_80_half_features":
             feature_importances = model.feature_importances_.copy()
+            if save_model_path is not None:
+                save_model_path.parent.mkdir(parents=True, exist_ok=True)
+                joblib.dump(model, save_model_path)
+                print(f"Saved final model to {save_model_path}")
 
     voting_model = build_voting_model(seed)
     print("Training voting_ensemble", flush=True)
@@ -327,21 +334,22 @@ def run_experiments(
     best_name = validation_results.sort_values("macro_f1", ascending=False).iloc[0]["model"]
     print(f"Best validation model: {best_name}")
 
-    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    plot_experiment_metrics(results, IMAGES_DIR / "cp2_experiment_metrics.png")
-    plot_pca_projection(x_train, y_train, IMAGES_DIR / "cp2_pca_projection.png", seed)
-    plot_pca_variance(x_train, IMAGES_DIR / "cp2_pca_variance.png", seed)
-    if feature_importances is not None:
-        importance_frame = pd.DataFrame({"feature": dataset["feature_names"], "importance": feature_importances})
-        top = importance_frame.sort_values("importance", ascending=False).head(25).sort_values("importance")
-        fig, ax = plt.subplots(figsize=(10, 7))
-        ax.barh(top["feature"], top["importance"], color="#59a14f")
-        ax.set_title("Top ExtraTrees feature importances")
-        ax.set_xlabel("Importance")
-        ax.set_ylabel("Feature")
-        fig.tight_layout()
-        fig.savefig(IMAGES_DIR / "cp2_feature_importance.png", dpi=160, bbox_inches="tight")
-        plt.close(fig)
+    if not skip_plots:
+        IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+        plot_experiment_metrics(results, IMAGES_DIR / "cp2_experiment_metrics.png")
+        plot_pca_projection(x_train, y_train, IMAGES_DIR / "cp2_pca_projection.png", seed)
+        plot_pca_variance(x_train, IMAGES_DIR / "cp2_pca_variance.png", seed)
+        if feature_importances is not None:
+            importance_frame = pd.DataFrame({"feature": dataset["feature_names"], "importance": feature_importances})
+            top = importance_frame.sort_values("importance", ascending=False).head(25).sort_values("importance")
+            fig, ax = plt.subplots(figsize=(10, 7))
+            ax.barh(top["feature"], top["importance"], color="#59a14f")
+            ax.set_title("Top ExtraTrees feature importances")
+            ax.set_xlabel("Importance")
+            ax.set_ylabel("Feature")
+            fig.tight_layout()
+            fig.savefig(IMAGES_DIR / "cp2_feature_importance.png", dpi=160, bbox_inches="tight")
+            plt.close(fig)
 
     summary = {
         "best_validation_model": str(best_name),
@@ -369,12 +377,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset", type=Path, default=DATASET_PATH)
     parser.add_argument("--output", type=Path, default=REPORT_DIR / "experiments.csv")
     parser.add_argument("--seed", type=int, default=RANDOM_SEED)
+    parser.add_argument("--save-model", type=Path, default=None)
+    parser.add_argument("--skip-plots", action="store_true")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    run_experiments(args.dataset, args.output, args.seed)
+    run_experiments(args.dataset, args.output, args.seed, args.save_model, args.skip_plots)
 
 
 if __name__ == "__main__":

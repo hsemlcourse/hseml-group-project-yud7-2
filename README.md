@@ -13,7 +13,8 @@
 3. [Запуск](#запуск)
 4. [Данные](#данные)
 5. [Результаты](#результаты)
-6. [Отчёт](#отчёт)
+6. [Деплой](#деплой)
+7. [Отчёт](#отчёт)
 
 
 ## Описание задачи
@@ -117,6 +118,18 @@ make features
 make experiments
 ```
 
+Локальный деплой FastAPI:
+```bash
+make features
+make train-final
+make api
+```
+
+После запуска приложение доступно по адресам:
+- UI: http://localhost:8000/
+- Swagger/OpenAPI: http://localhost:8000/docs
+- healthcheck: http://localhost:8000/health
+
 Альтернативный preprocess-пайплайн по `.npz` можно запустить через `split.zip` и `preprocess.zip`:
 ```bash
 python -m src.data download --files split.zip preprocess.zip
@@ -144,6 +157,20 @@ python -m src.modeling
 | Most frequent dummy | 0.007 | 0.296 | Test, наивная нижняя планка |
 | SGD Logistic baseline | 0.126 | 0.288 | Test, baseline без feature engineering |
 | ExtraTrees final | 0.191 | 0.557 | Test, engineered features, лучшая validation macro F1 |
+
+## Деплой
+
+В проекте есть локальный FastAPI-сервис `src.app:app`. Он использует ignored artifact `models/cp2_best_model.joblib` и локальный `data/processed/portugal_engineered_features.npz`.
+
+Если модели нет, её можно восстановить командой:
+```bash
+make train-final
+```
+
+Docker-запуск API:
+```bash
+make docker-api
+```
 
 
 ## Отчёт

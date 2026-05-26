@@ -1,4 +1,4 @@
-.PHONY: lint test data baseline features experiments docker-check
+.PHONY: lint test data baseline features experiments train-final api docker-check docker-api
 
 PYTHON ?= python
 
@@ -22,5 +22,14 @@ features:
 experiments:
 	$(PYTHON) -m src.experiments
 
+train-final:
+	$(PYTHON) -m src.experiments --save-model models/cp2_best_model.joblib --skip-plots
+
+api:
+	$(PYTHON) -m uvicorn src.app:app --host 0.0.0.0 --port 8000
+
 docker-check:
 	docker compose up --build
+
+docker-api:
+	docker compose up --build api
