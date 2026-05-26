@@ -157,6 +157,7 @@ make api
 
 ![Deploy Swagger](images/deploy_swagger.png)
 
+Ссылка на видео: https://drive.google.com/file/d/1g8H4yOlJAQN5Fzcdys8qt0_CZLOPEk2m/view?usp=drive_link
 
 ## 8. Заключение и выводы
 
